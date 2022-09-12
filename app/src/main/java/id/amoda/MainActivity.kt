@@ -8,16 +8,17 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.webkit.*
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.fragment.app.FragmentManager
 import com.example.core.utils.WebViewDataHelper
 import com.example.core.utils.WebViewHelper
 import id.amoda.databinding.ActivityMainBinding
+
 
 class MainActivity : AppCompatActivity(), WebViewHelper {
     private lateinit var binding: ActivityMainBinding
@@ -29,8 +30,13 @@ class MainActivity : AppCompatActivity(), WebViewHelper {
         Manifest.permission.ACCESS_BACKGROUND_LOCATION,
         Manifest.permission.WRITE_EXTERNAL_STORAGE,
         Manifest.permission.MANAGE_EXTERNAL_STORAGE,
-        Manifest.permission.READ_EXTERNAL_STORAGE)
+        Manifest.permission.READ_EXTERNAL_STORAGE
+    )
     private val requestCode = 1
+
+    private val FILECHOOSER_RESULTCODE = 1
+
+    private var mUploadMessage: ValueCallback<Array<Uri?>?>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,6 +64,68 @@ class MainActivity : AppCompatActivity(), WebViewHelper {
 
         return true
     }
+
+    internal inner class MyWebChromeClient : WebChromeClient() {
+        @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+        override fun onPermissionRequest(request: PermissionRequest) {
+            request.grant(request.resources)
+        }
+
+        override fun onProgressChanged(view: WebView?, newProgress: Int) {
+            super.onProgressChanged(view, newProgress)
+            binding.webviewLoadIndicator.visibility = View.VISIBLE
+            binding.frameWebView.visibility = View.GONE
+            if (newProgress == 100) {
+                binding.webviewLoadIndicator.visibility = View.GONE
+                binding.frameWebView.visibility = View.VISIBLE
+            }
+        }
+
+        // maneja la accion de seleccionar archivos
+        override fun onShowFileChooser(
+            webView: WebView?,
+            filePathCallback: ValueCallback<Array<Uri?>?>,
+            fileChooserParams: FileChooserParams?
+        ): Boolean {
+
+            // asegurar que no existan callbacks
+            if (mUploadMessage != null) {
+                try {
+                    mUploadMessage!!.onReceiveValue(null)
+                } catch (e: Exception) {
+
+                }
+            }
+            mUploadMessage = filePathCallback
+            val i = Intent(Intent.ACTION_GET_CONTENT)
+            i.addCategory(Intent.CATEGORY_OPENABLE)
+            i.type = "image/*" // set MIME type to filter
+            this@MainActivity.startActivityForResult(
+                Intent.createChooser(i, "File Chooser"),
+                FILECHOOSER_RESULTCODE
+            )
+            return true
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, intent: Intent?) {
+        super.onActivityResult(requestCode, resultCode, intent)
+
+        // manejo de seleccion de archivo
+        if (requestCode == FILECHOOSER_RESULTCODE) {
+            if (null == mUploadMessage || intent == null || resultCode != RESULT_OK) {
+                return
+            }
+            var result: Array<Uri?>? = null
+            val dataString = intent.dataString
+            if (dataString != null) {
+                result = arrayOf(Uri.parse(dataString))
+            }
+            mUploadMessage!!.onReceiveValue(result)
+            mUploadMessage
+        }
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     private fun initWebView() {
         Log.d("WebView load ", url)
@@ -72,28 +140,16 @@ class MainActivity : AppCompatActivity(), WebViewHelper {
             settings.setGeolocationEnabled(true)
             settings.javaScriptEnabled = true
             isVerticalScrollBarEnabled = true
-            settings.domStorageEnabled = true
+            settings.allowContentAccess = true
+            settings.setAppCacheEnabled(false)
+            settings.cacheMode = WebSettings.LOAD_NO_CACHE
+            webChromeClient = MyWebChromeClient()
             WebView.setWebContentsDebuggingEnabled(true)
 
             jsInterface?.let {
                 addJavascriptInterface(it, "nativeApp")
             }
 
-            webChromeClient = object : WebChromeClient() {
-                @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-                override fun onPermissionRequest(request: PermissionRequest) {
-                    request.grant(request.resources)
-                }
-                override fun onProgressChanged(view: WebView?, newProgress: Int) {
-                    super.onProgressChanged(view, newProgress)
-                    binding.webviewLoadIndicator.visibility = View.VISIBLE
-                    binding.frameWebView.visibility = View.GONE
-                    if (newProgress == 100) {
-                        binding.webviewLoadIndicator.visibility = View.GONE
-                        binding.frameWebView.visibility = View.VISIBLE
-                    }
-                }
-            }
             webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView?, url: String?) {
                     super.onPageFinished(view, url)
