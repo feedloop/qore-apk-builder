@@ -1,17 +1,19 @@
 package id.amoda
 
+import android.Manifest
 import android.annotation.SuppressLint
+import android.annotation.TargetApi
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.view.View
-import android.webkit.WebChromeClient
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
+import android.webkit.*
+import androidx.core.app.ActivityCompat
 import androidx.fragment.app.FragmentManager
 import com.example.core.utils.WebViewDataHelper
 import com.example.core.utils.WebViewHelper
@@ -19,6 +21,16 @@ import id.amoda.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity(), WebViewHelper {
     private lateinit var binding: ActivityMainBinding
+
+    private val permission = arrayOf(
+        Manifest.permission.CAMERA,
+        Manifest.permission.ACCESS_COARSE_LOCATION,
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+        Manifest.permission.WRITE_EXTERNAL_STORAGE,
+        Manifest.permission.MANAGE_EXTERNAL_STORAGE,
+        Manifest.permission.READ_EXTERNAL_STORAGE)
+    private val requestCode = 1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,10 +40,24 @@ class MainActivity : AppCompatActivity(), WebViewHelper {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        if (!isPermissionGranted()) {
+            askPermissions()
+        }
         initWebView()
-
     }
 
+    private fun askPermissions() {
+        ActivityCompat.requestPermissions(this, permission, requestCode)
+    }
+
+    private fun isPermissionGranted(): Boolean {
+        permission.forEach {
+            if (ActivityCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED)
+                return false
+        }
+
+        return true
+    }
     @SuppressLint("SetJavaScriptEnabled")
     private fun initWebView() {
         Log.d("WebView load ", url)
@@ -54,6 +80,10 @@ class MainActivity : AppCompatActivity(), WebViewHelper {
             }
 
             webChromeClient = object : WebChromeClient() {
+                @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+                override fun onPermissionRequest(request: PermissionRequest) {
+                    request.grant(request.resources)
+                }
                 override fun onProgressChanged(view: WebView?, newProgress: Int) {
                     super.onProgressChanged(view, newProgress)
                     binding.webviewLoadIndicator.visibility = View.VISIBLE
