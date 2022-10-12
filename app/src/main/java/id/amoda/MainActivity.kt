@@ -24,13 +24,7 @@ class MainActivity : AppCompatActivity(), WebViewHelper {
     private lateinit var binding: ActivityMainBinding
 
     private val permission = arrayOf(
-        Manifest.permission.CAMERA,
-        Manifest.permission.ACCESS_COARSE_LOCATION,
-        Manifest.permission.ACCESS_FINE_LOCATION,
-        Manifest.permission.ACCESS_BACKGROUND_LOCATION,
         Manifest.permission.WRITE_EXTERNAL_STORAGE,
-        Manifest.permission.MANAGE_EXTERNAL_STORAGE,
-        Manifest.permission.READ_EXTERNAL_STORAGE
     )
     private val requestCode = 1
 
@@ -113,11 +107,11 @@ class MainActivity : AppCompatActivity(), WebViewHelper {
 
         // manejo de seleccion de archivo
         if (requestCode == FILECHOOSER_RESULTCODE) {
-            if (null == mUploadMessage || intent == null || resultCode != RESULT_OK) {
-                return
-            }
+//            if (null == mUploadMessage || intent == null || resultCode != RESULT_OK) {
+//                return
+//            }
             var result: Array<Uri?>? = null
-            val dataString = intent.dataString
+            val dataString = intent?.dataString
             if (dataString != null) {
                 result = arrayOf(Uri.parse(dataString))
             }
