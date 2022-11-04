@@ -10,10 +10,19 @@ android {
         applicationId "id.amoda"
         minSdk 21
         targetSdk 32
-        versionCode 3
-        versionName "1.0"
+        versionCode 5
+        versionName "1.2.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        relese {
+            storeFile project.file("keyStoreAmoda.jks")
+            storePassword "gnm12345"
+            keyAlias "amoda"
+            keyPassword "gnm12345"
+        }
     }
 
     buildTypes {
